@@ -1,0 +1,311 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Chronos by airbnb</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Chronos</h1>
+        <p>Fault tolerant job scheduler that handles dependencies and iso8601 based schedules.</p>
+
+        <p class="view"><a href="https://github.com/airbnb/chronos">View the Project on GitHub <small>airbnb/chronos</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/airbnb/chronos/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/airbnb/chronos/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/airbnb/chronos">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>Chronos</h1>
+
+<p>Chronos is AirBnB's replacement for <code>cron</code>.
+It is a distributed, fault-tolerant system which runs on top of <a href="http://incubator.apache.org/mesos/" title="Apache Mesos"></a>.</p>
+
+<p>Chronos has a number of advantages over regular cron.
+It allows you to schedule your jobs using <a href="http://en.wikipedia.org/wiki/ISO_8601" title="ISO8601 Standard"></a> time specifications, which enables more flexibility in job scheduling.
+Chronos also supports the definition of jobs which depend on other jobs to complete successfully first.</p>
+
+<ul>
+<li><a href="#Quick%20Start">Quick Start</a></li>
+<li><a href="#License">License</a></li>
+<li><a href="#Contributors">Contributors</a></li>
+<li>
+<a href="#API">API</a>
+
+<ul>
+<li><a href="#Leaders">Leaders</a></li>
+<li><a href="#Listing%20Jobs">Listing Jobs</a></li>
+<li><a href="#Deleting%20a%20Job">Deleting a Job</a></li>
+<li><a href="#Deleting%20All%20Jobs">Deleting All Jobs</a></li>
+<li><a href="#Manually%20Starting%20a%20Job">Manually Starting a Job</a></li>
+<li><a href="#Adding%20a%20Scheduled%20Job">Adding a Scheduled Job</a></li>
+<li><a href="#Adding%20a%20Dependent%20Job">Adding a Dependent Job</a></li>
+<li><a href="#Asynchronous%20Jobs">Asynchronous Jobs</a></li>
+<li><a href="#Obtaining%20Remote%20Executables">Obtaining Remote Executables</a></li>
+</ul>
+</li>
+<li><a href="#Debugging%20Chronos%20Jobs">Debugging Chronos Jobs</a></li>
+<li><a href="#Notes">Notes</a></li>
+<li>
+<a href="#Notes">Appendix</a>
+
+<ul>
+<li><a href="#Finding%20a%20Node%20to%20Talk%20to">Finding a Node to Talk to</a></li>
+<li><a href="#Zookeeper">Zookeeper</a></li>
+</ul>
+</li>
+</ul><h2>Quick Start</h2>
+
+<p>There is a file called 'installer.bash' that can be found in the bin directory of the repo. It will compile and install mesos and Chronos.
+After successful installation a local version of Chronos with a built-in ZK server is started. You will need Maven 3.X, a JDK and build tools to get up and running.
+This is how you run this installer:</p>
+
+<pre><code>$./bin/installer.bash
+</code></pre>
+
+<p>If you get an error while compiling <a href="http://incubator.apache.org/mesos/" title="Apache Mesos"></a>, please consult the FAQ.</p>
+
+<h2>License</h2>
+
+<p>The use and distribution terms for this software are covered by the
+Apache 2.0 License (<a href="http://www.apache.org/licenses/LICENSE-2.0.html">http://www.apache.org/licenses/LICENSE-2.0.html</a>)
+which can be found in the file LICENSE at the root of this distribution.
+By using this software in any fashion, you are agreeing to be bound by
+the terms of this license.
+You must not remove this notice, or any other, from this software.</p>
+
+<h2>Contributors</h2>
+
+<ul>
+<li>Florian Leibert (<a href="http://twitter.com/flo">@flo</a>)</li>
+<li>Andy Kramolisch (<a href="https://github.com/andykram">@andykram</a>)</li>
+<li>Harry Shoff (<a href="https://github.com/hshoff">@hshoff</a>)</li>
+</ul><h2>API</h2>
+
+<p>You can communicate with Chronos using a RESTful <a href="http://www.json.org/">JSON</a> API over HTTP.
+Chronos nodes usually listen on <code>port 4400</code> for API requests.
+All examples in this section assume that you've found a running leader at <code>chronos-leader.airbnb.com:4400</code>.</p>
+
+<h3>Leaders</h3>
+
+<p>When you have multiple Chronos nodes running, only one of them will be elected as the leader.
+The leader is the only node that responds to API requests, but if you attempt to talk to a non-leader your request will automatically be redirected to a leader.</p>
+
+<h3>Listing Jobs</h3>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/jobs</strong>
+</li>
+<li>Method: <strong>GET</strong>
+</li>
+<li>Example: <code>curl curl -L -X GET chronos-node:4400/scheduler/jobs</code>
+</li>
+<li>Response: JSON data</li>
+</ul><p>A job listing returns a JSON list containing all of the jobs.
+Each job is a JSON hash.
+Interesting fields in the hashes are:</p>
+
+<ul>
+<li>
+<code>invocationCount</code>: the number of times the job completed</li>
+<li>
+<code>executor</code>: auto-determined by chronos, but will usually be "" for non-async jobs</li>
+<li>
+<code>parents</code>: for dependent jobs, a list of all other jobs that must run before this job will do so</li>
+</ul><p>If there is a <code>parents</code> field there will be no <code>schedule</code> field and vice-versa.</p>
+
+<h3>Deleting a Job</h3>
+
+<p>Get a job name from the job listing above. Then:</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/job/jobName</strong>
+</li>
+<li>Method: <strong>DELETE</strong>
+</li>
+<li>Example: <code>curl -L -X DELETE chronos-node:4400/scheduler/job/request_event_counter_hourly</code>
+</li>
+<li>Response: HTTP 204</li>
+</ul><h3>Deleting All Jobs</h3>
+
+<p>Note: <em>don't do this</em>.</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/jobs</strong>
+</li>
+<li>Method: <strong>DELETE</strong>
+</li>
+<li>Example: <code>curl -L -X DELETE chronos-node:4400/scheduler/jobs</code>
+</li>
+<li>Response: HTTP 204</li>
+</ul><h3>Manually Starting a Job</h3>
+
+<p>You can manually start a job by issuing an HTTP request.</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/job</strong>
+</li>
+<li>Method: <strong>PUT</strong>
+</li>
+<li>Example: <code>curl -L chronos-node:4400/scheduler/job/request_event_counter_hourly</code>
+</li>
+<li>Response: HTTP 204</li>
+</ul><h3>Adding a Scheduled Job</h3>
+
+<p>The heart of job scheduling is a JSON POST request.
+The JSON hash you send to Chronos should contain the following fields:</p>
+
+<ul>
+<li>Name: the name the job will be known by</li>
+<li>Command: the actual command that will be executed by Chronos</li>
+<li>Schedule: The scheduling for the job, in ISO8601 format. Consists of 3 parts separated by '/':
+
+<ul>
+<li>Number of times to repeat the job; put just 'R' to repeat forever</li>
+<li>The start time of the job</li>
+<li>The run interval</li>
+</ul>
+</li>
+<li>Epsilon: If Chronos misses the scheduled run time for any reason, it will still run the job if the time is within this interval.</li>
+<li>Owner: the email address of the person responsible for the job</li>
+<li>Async: whether the job runs in the background</li>
+</ul><p>Here is an example job hash:</p>
+
+<div class="highlight"><pre><span class="p">{</span>
+  <span class="nt">"schedule"</span><span class="p">:</span><span class="s2">"R10/2012-10-01T05:52:00Z/PT2S"</span><span class="p">,</span>
+  <span class="nt">"name"</span><span class="p">:</span><span class="s2">"SAMPLE_JOB1"</span><span class="p">,</span>
+  <span class="nt">"epsilon"</span><span class="p">:</span><span class="s2">"PT15M"</span><span class="p">,</span>
+  <span class="nt">"command"</span><span class="p">:</span><span class="s2">"echo 'FOO' &gt;&gt; /tmp/s99"</span><span class="p">,</span>
+  <span class="nt">"owner"</span><span class="p">:</span><span class="s2">"bob@airbnb.com"</span><span class="p">,</span><span class="nt">"async"</span><span class="p">:</span><span class="kc">false</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Once you've generated the hash, send it to Chronos like so:</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/iso8601</strong>
+</li>
+<li>Method: POST</li>
+<li>Example:
+<code>bash
+ curl -L -H 'Content-Type: application/json' -X POST -H 'Content-Type: application/json' -d '{json hash}' chronos-node:4400/scheduler/iso8601
+</code>
+</li>
+<li>Response: HTTP 204</li>
+</ul><h3>Adding a Dependent Job</h3>
+
+<p>A dependent job takes the same JSON format as a scheduled job.
+However, instead of the <code>schedule</code> field, it will accept a <code>parents</code> field.
+This should be a JSON list of all jobs which must run at least once before this job will run.</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/dependency</strong>
+</li>
+<li>Method: <strong>POST</strong>
+</li>
+<li>Example:
+<code>bash
+curl -L -X POST -H 'Content-Type: application/json' -d '{dependent hash}' chronos-node:4400/scheduler/iso8601
+</code>
+</li>
+</ul><h3>Asynchronous Jobs</h3>
+
+<p>If your job is long-running, you may want to run it asynchronously.
+In this case, you need to do two things:</p>
+
+<p>1: When adding your job, add <code>#async</code> to the name
+2: Add an <code>executor</code> field to your job hash and set it to <code>/srv/mesos/utils/async-executor.arx</code>
+3: Your job when complete should report it's completion status to Chronos.</p>
+
+<p>If you forget to do (2), your job will never run again because Chronos will think that it is still running.
+Reporting job completion to Chronos is done via another API call:</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/task/*task id*</strong>
+</li>
+<li>Method: <strong>PUT</strong>
+</li>
+<li>Example:
+<code>bash
+curl -X PUT -H "Content-Type: application/json" -d '{"statusCode":0}' chronos-leader:4400/scheduler/task/my_job_run_555_882083xkj302
+</code>
+</li>
+</ul><p>The task id is auto-generated by chronos.
+It will be available in your job's environment as <code>$mesos_task_id</code>.
+Note: you may need to url-encode the mesos task id in order to submit it as part of the URL.</p>
+
+<h3>Obtaining Remote Executables</h3>
+
+<p>When specifying the <code>command</code> field in your job hash, use the <code>url-runner.bash</code> (make sure it's deployed on all slaves). Alternatively,
+you can also use a url in the command field, if your mesos was compiled with cURL libraries.</p>
+
+<h2>Debugging Chronos Jobs</h2>
+
+<p>Chronos itself can be configured just like <a href="http://dropwizard.codahale.com/manual/core/#logging">dropwizard-logging</a> via the configuration file. If there's something going wrong with the framework itself look here for information. Individual jobs log with their task id on the mesos slaves.
+Look in the standard out log for your job name and the string "ready for launch", or else "job ct:" and your job name.
+The job is done when the line in the log says:
+<code>Task with id 'value: TASK_ID</code>
+The output will say either "**FINISHED**" or "**FAILED**".</p>
+
+<p>To find debug logs on the mesos slave, look in <code>/tmp/mesos/slaves</code> on the slave instance (unless you've specifically supplied a different log folder for mesos). For example:</p>
+
+<p><code>/tmp/mesos/slaves/</code></p>
+
+<p>In that dir, the current slave run is timestamped so look for the most recent.
+Under that is a list of frameworks; you're interested in the chronos framework. For example:
+<code>/tmp/mesos/slaves/STAMP/frameworks/</code></p>
+
+<h2>Notes</h2>
+
+<p>The curl executor is even more powerful if the specified URLs are packaged and self-contained executables.
+This can be done for example via arx, which bundles code <a href="https://github.com/solidsnack/arx"></a>.
+Arx applications in turn contain shell commands and an archive (e.g. a jar file and a startup-script).
+It's easy to use and there are no libraries required to unpack and execute the archive.</p>
+
+<p>Signed URLs can be used to publish arx files (e.g. on s3).</p>
+
+<p>To start a new scheduler you have to give the JVM access to the native mesos library.
+You can do so by either setting the <code>java.library.path</code> to the build mesos library or create an environment variable <code>MESOS_NATIVE_LIBRARY</code> and set it to the <code>mesoslib.dylib</code> / <code>mesoslib.so</code> file</p>
+
+<p>Also, you have to set <code>MESOS_LAUNCHER_DIR</code> to the src of the build of mesos such that the shell executor can be found. (e.g. <code>/Users/florian/airbnb_code/mesos/build/src</code>)</p>
+
+<p>Also set <code>MESOS_KILLTREE</code> to the location of the killtree.sh script - <code>/Users/florian/airbnb_code/mesos/src/scripts/killtree.sh</code></p>
+
+<p>If you're using the installer script this should be setup for you</p>
+
+<h2>Appendix</h2>
+
+<h3>Finding a Node to Talk to</h3>
+
+<p>As we mentioned, Chronos is designed (not required) to run with multiple nodes of which one is elected master.
+If you use the cURL command line tool, you can use the "-L" flag and hit any chronos node and you will get a
+307 REDIRECT to the leader.</p>
+
+<h3>Zookeeper</h3>
+
+<p>Chronos registers itself with <a href="http://zookeeper.apache.org/"></a> at the location <code>/airbnb/service/chronos</code>.
+Framework masters are in the subpath <code>candidates</code>.
+Get the value of any member node under <code>candidates</code> to get a Chronos framework node.
+You an query any of those nodes -- non-leaders will redirect your request to the current leader automatically.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/airbnb">airbnb</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
