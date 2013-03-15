@@ -31,16 +31,21 @@
         <h1>Chronos</h1>
 
 <p>Chronos is AirBnB's replacement for <code>cron</code>.
-It is a distributed, fault-tolerant system which runs on top of <a href="http://incubator.apache.org/mesos/" title="Apache Mesos"></a>.</p>
+It is a distributed and fault-tolerant scheduler which runs on top of <a href="http://incubator.apache.org/mesos/" title="Apache Mesos">mesos</a>. It's a framework and supports custom
+<a href="http://incubator.apache.org/mesos/" title="Apache Mesos">mesos</a> executors as well as the default command executor. Thus by default, chronos executes SH (on most systems BASH) scripts.
+Chronos can be used to interact with systems such as Hadoop (incl. EMR), even if the mesos slaves on which execution happens
+do not have Hadoop installed. Included wrapper scripts allow transfering files and executing them on a remote machine in the background
+and using asynchroneous callbacks to notify chronos of job completion or failures. </p>
 
 <p>Chronos has a number of advantages over regular cron.
-It allows you to schedule your jobs using <a href="http://en.wikipedia.org/wiki/ISO_8601" title="ISO8601 Standard"></a> time specifications, which enables more flexibility in job scheduling.
-Chronos also supports the definition of jobs which depend on other jobs to complete successfully first.</p>
+It allows you to schedule your jobs using <a href="http://en.wikipedia.org/wiki/ISO_8601" title="ISO8601 Standard">ISO8601</a> repeating interval notation, which enables more flexibility in job scheduling.
+Chronos also supports the definition of jobs triggered by the completion of other jobs. It supports arbitrarily long dependency chains.</p>
 
 <ul>
 <li><a href="#Quick%20Start">Quick Start</a></li>
 <li><a href="#License">License</a></li>
 <li><a href="#Contributors">Contributors</a></li>
+<li><a href="#GUI">GUI</a></li>
 <li>
 <a href="#API">API</a>
 
@@ -52,6 +57,7 @@ Chronos also supports the definition of jobs which depend on other jobs to compl
 <li><a href="#Manually%20Starting%20a%20Job">Manually Starting a Job</a></li>
 <li><a href="#Adding%20a%20Scheduled%20Job">Adding a Scheduled Job</a></li>
 <li><a href="#Adding%20a%20Dependent%20Job">Adding a Dependent Job</a></li>
+<li><a href="#Describing%20the%20Dependency%20Graph">Describing the Dependency Graph</a></li>
 <li><a href="#Asynchronous%20Jobs">Asynchronous Jobs</a></li>
 <li><a href="#Obtaining%20Remote%20Executables">Obtaining Remote Executables</a></li>
 </ul>
@@ -75,7 +81,7 @@ This is how you run this installer:</p>
 <pre><code>$./bin/installer.bash
 </code></pre>
 
-<p>If you get an error while compiling <a href="http://incubator.apache.org/mesos/" title="Apache Mesos"></a>, please consult the FAQ.</p>
+<p>If you get an error while compiling <a href="http://incubator.apache.org/mesos/" title="Apache Mesos"></a>, please consult the <a href="https://github.com/airbnb/chronos/blob/master/docs/FAQ.md">FAQ</a>.</p>
 
 <h2>License</h2>
 
@@ -92,7 +98,13 @@ You must not remove this notice, or any other, from this software.</p>
 <li>Florian Leibert (<a href="http://twitter.com/flo">@flo</a>)</li>
 <li>Andy Kramolisch (<a href="https://github.com/andykram">@andykram</a>)</li>
 <li>Harry Shoff (<a href="https://github.com/hshoff">@hshoff</a>)</li>
-</ul><h2>API</h2>
+</ul><h2>UI</h2>
+
+<p>Chronos comes with a UI which can be used to add, delete, list, modify and run jobs. It can also show a graph of job dependencies.</p>
+
+<p><img src="https://raw.github.com/airbnb/chronos/master/docs/chronos_ui-1.png" alt="Chronos UI screenshot" title="Image call example"></p>
+
+<h2>API</h2>
 
 <p>You can communicate with Chronos using a RESTful <a href="http://www.json.org/">JSON</a> API over HTTP.
 Chronos nodes usually listen on <code>port 4400</code> for API requests.
@@ -220,6 +232,19 @@ This should be a JSON list of all jobs which must run at least once before this 
 curl -L -X POST -H 'Content-Type: application/json' -d '{dependent hash}' chronos-node:4400/scheduler/iso8601
 </code>
 </li>
+</ul><h3>Describing the Dependency Graph</h3>
+
+<p>Chronos allows to describe the dependency graph and has an endpoint to return this graph in form of a dotfile.</p>
+
+<ul>
+<li>Endpoint: <strong>/scheduler/graph/dot</strong>
+</li>
+<li>Method: GET</li>
+<li>Example:
+<code>bash
+curl -L -X GET chronos-node:4400/scheduler/graph/dot
+</code>
+</li>
 </ul><h3>Asynchronous Jobs</h3>
 
 <p>If your job is long-running, you may want to run it asynchronously.
@@ -255,17 +280,22 @@ you can also use a url in the command field, if your mesos was compiled with cUR
 
 <p>Chronos itself can be configured just like <a href="http://dropwizard.codahale.com/manual/core/#logging">dropwizard-logging</a> via the configuration file. If there's something going wrong with the framework itself look here for information. Individual jobs log with their task id on the mesos slaves.
 Look in the standard out log for your job name and the string "ready for launch", or else "job ct:" and your job name.
-The job is done when the line in the log says:
-<code>Task with id 'value: TASK_ID</code>
-The output will say either "**FINISHED**" or "**FAILED**".</p>
+The job is done when the line in the log says:</p>
+
+<pre><code>Task with id 'value: TASK_ID **FINISHED**
+</code></pre>
 
 <p>To find debug logs on the mesos slave, look in <code>/tmp/mesos/slaves</code> on the slave instance (unless you've specifically supplied a different log folder for mesos). For example:</p>
 
-<p><code>/tmp/mesos/slaves/</code></p>
+<pre><code>/tmp/mesos/slaves/
+</code></pre>
 
 <p>In that dir, the current slave run is timestamped so look for the most recent.
-Under that is a list of frameworks; you're interested in the chronos framework. For example:
-<code>/tmp/mesos/slaves/STAMP/frameworks/</code></p>
+Under that is a list of frameworks; you're interested in the chronos framework.
+For example:</p>
+
+<pre><code>/tmp/mesos/slaves/STAMP/frameworks/
+</code></pre>
 
 <h2>Notes</h2>
 
@@ -279,11 +309,11 @@ It's easy to use and there are no libraries required to unpack and execute the a
 <p>To start a new scheduler you have to give the JVM access to the native mesos library.
 You can do so by either setting the <code>java.library.path</code> to the build mesos library or create an environment variable <code>MESOS_NATIVE_LIBRARY</code> and set it to the <code>mesoslib.dylib</code> / <code>mesoslib.so</code> file</p>
 
-<p>Also, you have to set <code>MESOS_LAUNCHER_DIR</code> to the src of the build of mesos such that the shell executor can be found. (e.g. <code>/Users/florian/airbnb_code/mesos/build/src</code>)</p>
+<p>Also, you have to set <code>MESOS_LAUNCHER_DIR</code> to the src of the build of mesos such that the shell executor can be found (e.g. <code>/Users/florian/airbnb_code/mesos/build/src</code>).</p>
 
 <p>Also set <code>MESOS_KILLTREE</code> to the location of the killtree.sh script - <code>/Users/florian/airbnb_code/mesos/src/scripts/killtree.sh</code></p>
 
-<p>If you're using the installer script this should be setup for you</p>
+<p>If you're using the installer script this should be setup for you.</p>
 
 <h2>Appendix</h2>
 
@@ -295,10 +325,7 @@ If you use the cURL command line tool, you can use the "-L" flag and hit any chr
 
 <h3>Zookeeper</h3>
 
-<p>Chronos registers itself with <a href="http://zookeeper.apache.org/"></a> at the location <code>/airbnb/service/chronos</code>.
-Framework masters are in the subpath <code>candidates</code>.
-Get the value of any member node under <code>candidates</code> to get a Chronos framework node.
-You an query any of those nodes -- non-leaders will redirect your request to the current leader automatically.</p>
+<p>Chronos registers itself with <a href="http://zookeeper.apache.org/"></a> at the location <code>/airbnb/service/chronos</code>. This value can be changed via the configuration file.</p>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/airbnb">airbnb</a></p>
