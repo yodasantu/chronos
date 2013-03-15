@@ -32,10 +32,10 @@
 
 <p>Chronos is airbnb's replacement for <code>cron</code>.
 It is a distributed and fault-tolerant scheduler which runs on top of <a href="http://incubator.apache.org/mesos/" title="Apache Mesos">mesos</a>. It's a framework and supports custom
-<a href="http://incubator.apache.org/mesos/" title="Apache Mesos">mesos</a> executors as well as the default command executor. Thus by default, chronos executes SH (on most systems BASH) scripts.
+<a href="http://incubator.apache.org/mesos/" title="Apache Mesos">mesos</a> executors as well as the default command executor. Thus by default, Chronos executes SH (on most systems BASH) scripts.
 Chronos can be used to interact with systems such as Hadoop (incl. EMR), even if the mesos slaves on which execution happens
 do not have Hadoop installed. Included wrapper scripts allow transfering files and executing them on a remote machine in the background
-and using asynchroneous callbacks to notify chronos of job completion or failures.</p>
+and using asynchroneous callbacks to notify Chronos of job completion or failures.</p>
 
 <p>Chronos has a number of advantages over regular cron.
 It allows you to schedule your jobs using <a href="http://en.wikipedia.org/wiki/ISO_8601" title="ISO8601 Standard">ISO8601</a> repeating interval notation, which enables more flexibility in job scheduling.
@@ -105,7 +105,7 @@ You must not remove this notice, or any other, from this software.</p>
 <h2>UI</h2>
 
 <p>Chronos comes with a UI which can be used to add, delete, list, modify and run jobs. It can also show a graph of job dependencies.
-The screenshot should give you a good idea of what chronos can do.</p>
+The screenshot should give you a good idea of what Chronos can do.</p>
 
 <p><img src="https://raw.github.com/airbnb/chronos/master/docs/chronos_ui-1.png" alt="Chronos UI screenshot" title="Chronos UI overview"></p>
 
@@ -115,7 +115,7 @@ The screenshot should give you a good idea of what chronos can do.</p>
 
 <p>You can communicate with Chronos using a RESTful <a href="http://www.json.org/">JSON</a> API over HTTP.
 Chronos nodes usually listen on <code>port 4400</code> for API requests.
-All examples in this section assume that you've found a running leader at <code>chronos-leader.airbnb.com:4400</code>.</p>
+All examples in this section assume that you've found a running leader at <code>chronos-node.airbnb.com:4400</code>.</p>
 
 <h3>Leaders</h3>
 
@@ -140,7 +140,7 @@ Interesting fields in the hashes are:</p>
 <li>
 <code>invocationCount</code>: the number of times the job completed</li>
 <li>
-<code>executor</code>: auto-determined by chronos, but will usually be "" for non-async jobs</li>
+<code>executor</code>: auto-determined by Chronos, but will usually be "" for non-async jobs</li>
 <li>
 <code>parents</code>: for dependent jobs, a list of all other jobs that must run before this job will do so</li>
 </ul><p>If there is a <code>parents</code> field there will be no <code>schedule</code> field and vice-versa.</p>
@@ -187,7 +187,7 @@ Interesting fields in the hashes are:</p>
 The JSON hash you send to Chronos should contain the following fields:</p>
 
 <ul>
-<li>Name: the name the job will be known by</li>
+<li>Name: the job name</li>
 <li>Command: the actual command that will be executed by Chronos</li>
 <li>Schedule: The scheduling for the job, in ISO8601 format. Consists of 3 parts separated by '/':
 
@@ -203,11 +203,12 @@ The JSON hash you send to Chronos should contain the following fields:</p>
 </ul><p>Here is an example job hash:</p>
 
 <div class="highlight"><pre><span class="p">{</span>
-  <span class="nt">"schedule"</span><span class="p">:</span><span class="s2">"R10/2012-10-01T05:52:00Z/PT2S"</span><span class="p">,</span>
-  <span class="nt">"name"</span><span class="p">:</span><span class="s2">"SAMPLE_JOB1"</span><span class="p">,</span>
-  <span class="nt">"epsilon"</span><span class="p">:</span><span class="s2">"PT15M"</span><span class="p">,</span>
-  <span class="nt">"command"</span><span class="p">:</span><span class="s2">"echo 'FOO' &gt;&gt; /tmp/s99"</span><span class="p">,</span>
-  <span class="nt">"owner"</span><span class="p">:</span><span class="s2">"bob@airbnb.com"</span><span class="p">,</span><span class="nt">"async"</span><span class="p">:</span><span class="kc">false</span>
+  <span class="err">_</span><span class="nt">"schedule"</span><span class="err">_</span><span class="p">:</span><span class="s2">"R10/2012-10-01T05:52:00Z/PT2S"</span><span class="p">,</span>
+  <span class="err">_</span><span class="nt">"name"</span><span class="err">_</span><span class="p">:</span><span class="s2">"SAMPLE_JOB1"</span><span class="p">,</span>
+  <span class="err">_</span><span class="nt">"epsilon"</span><span class="err">_</span><span class="p">:</span><span class="s2">"PT15M"</span><span class="p">,</span>
+  <span class="err">_</span><span class="nt">"command"</span><span class="err">_</span><span class="p">:</span><span class="s2">"echo 'FOO' &gt;&gt; /tmp/JOB1_OUT"</span><span class="p">,</span>
+  <span class="err">_</span><span class="nt">"owner"</span><span class="err">_</span><span class="p">:</span><span class="s2">"bob@airbnb.com"</span><span class="p">,</span>
+  <span class="err">_</span><span class="nt">"async"</span><span class="err">_</span><span class="p">:</span><span class="kc">false</span>
 <span class="p">}</span>
 </pre></div>
 
@@ -239,7 +240,27 @@ This should be a JSON list of all jobs which must run at least once before this 
 curl -L -X POST -H 'Content-Type: application/json' -d '{dependent hash}' chronos-node:4400/scheduler/iso8601
 </code>
 </li>
-</ul><h3>Describing the Dependency Graph</h3>
+</ul><p>Here is a more elaborate example for a dependency job hash:</p>
+
+<div class="highlight"><pre><span class="p">{</span>
+    <span class="nt">"async"</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">"command"</span><span class="p">:</span> <span class="s2">"bash -x /srv/data-infra/jobs/hive_query.bash run_hive hostings-earnings-summary"</span><span class="p">,</span>
+    <span class="nt">"epsilon"</span><span class="p">:</span> <span class="s2">"PT30M"</span><span class="p">,</span>
+    <span class="nt">"errorCount"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="nt">"lastError"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+    <span class="nt">"lastSuccess"</span><span class="p">:</span> <span class="s2">"2013-03-15T13:02:14.243Z"</span><span class="p">,</span>
+    <span class="nt">"name"</span><span class="p">:</span> <span class="s2">"hostings_earnings_summary"</span><span class="p">,</span>
+    <span class="nt">"owner"</span><span class="p">:</span> <span class="s2">"bob@airbnb.com"</span><span class="p">,</span>
+    <span class="nt">"parents"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">"db_export-airbed_hostings"</span><span class="p">,</span>
+        <span class="s2">"db_export-airbed_reservation2s"</span>
+    <span class="p">],</span>
+    <span class="nt">"retries"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="nt">"successCount"</span><span class="p">:</span> <span class="mi">100</span>
+<span class="p">}</span><span class="err">,</span>
+</pre></div>
+
+<h3>Describing the Dependency Graph</h3>
 
 <p>Chronos allows to describe the dependency graph and has an endpoint to return this graph in form of a dotfile.</p>
 
@@ -271,10 +292,10 @@ Reporting job completion to Chronos is done via another API call:</p>
 </li>
 <li>Example:
 <code>bash
-curl -X PUT -H "Content-Type: application/json" -d '{"statusCode":0}' chronos-leader:4400/scheduler/task/my_job_run_555_882083xkj302
+curl -L -X PUT -H "Content-Type: application/json" -d '{"statusCode":0}' chronos-node:4400/scheduler/task/my_job_run_555_882083xkj302
 </code>
 </li>
-</ul><p>The task id is auto-generated by chronos.
+</ul><p>The task id is auto-generated by Chronos.
 It will be available in your job's environment as <code>$mesos_task_id</code>.
 Note: you may need to url-encode the mesos task id in order to submit it as part of the URL.</p>
 
@@ -298,7 +319,7 @@ The job is done when the line in the log says:</p>
 </code></pre>
 
 <p>In that dir, the current slave run is timestamped so look for the most recent.
-Under that is a list of frameworks; you're interested in the chronos framework.
+Under that is a list of frameworks; you're interested in the Chronos framework.
 For example:</p>
 
 <pre><code>/tmp/mesos/slaves/STAMP/frameworks/
@@ -307,8 +328,8 @@ For example:</p>
 <h2>Notes</h2>
 
 <p>The curl executor is even more powerful if the specified URLs are packaged and self-contained executables.
-This can be done for example via arx, which bundles code <a href="https://github.com/solidsnack/arx"></a>.
-Arx applications in turn contain shell commands and an archive (e.g. a jar file and a startup-script).
+This can be done for example via <a href="https://github.com/solidsnack/arx">arx</a>, which bundles code into an executable archive.
+<a href="https://github.com/solidsnack/arx">Arx</a> applications in turn contain shell commands and an archive (e.g. a jar file and a startup-script).
 It's easy to use and there are no libraries required to unpack and execute the archive.</p>
 
 <p>Signed URLs can be used to publish arx files (e.g. on s3).</p>
@@ -327,7 +348,7 @@ You can do so by either setting the <code>java.library.path</code> to the build 
 <h3>Finding a Node to Talk to</h3>
 
 <p>As we mentioned, Chronos is designed (not required) to run with multiple nodes of which one is elected master.
-If you use the cURL command line tool, you can use the "-L" flag and hit any chronos node and you will get a
+If you use the cURL command line tool, you can use the "-L" flag and hit any Chronos node and you will get a
 307 REDIRECT to the leader.</p>
 
 <h3>Zookeeper</h3>
