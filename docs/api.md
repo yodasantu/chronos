@@ -71,6 +71,7 @@ You can manually start a job by issuing an HTTP request.
 * Endpoint: __/scheduler/job__
 * Method: __PUT__
 * Query string parameters: `arguments` - optional string with a list of command line arguments that is appended to job's `command`
+  * If job's `shell` is true `arguments` will be ignored.
 * Example: `curl -L -X PUT chronos-node:8080/scheduler/job/request_event_counter_hourly`
 * Example: `curl -L -X PUT chronos-node:8080/scheduler/job/job_name?arguments=-debug`
 * Response: HTTP 204
@@ -79,6 +80,7 @@ You can manually start a job by issuing an HTTP request.
 
 The heart of job scheduling is a JSON POST request.
 The JSON hash you send to Chronos should contain the following fields:
+
 * Name: the job name
 * Command: the actual command that will be executed by Chronos
 * Schedule: The scheduling for the job, in ISO8601 format. Consists of 3 parts separated by '/':
@@ -305,7 +307,7 @@ you can also use a url in the command field, if your mesos was compiled with cUR
 | executorFlags       | Flags to pass to Mesos executor.                                                                         | -                              |
 | retries             | Number of retries to attempt if a command returns a non-zero status                                      | `2`                            |
 | owner               | Email addresses to send job failure notifications.  Use comma-separated list for multiple addresses.     | -                              |
-| owner name          | Name of the individual responsible for the job.                                                          | -                              |
+| ownerName           | Name of the individual responsible for the job.                                                          | -                              |
 | async               | Execute using Async executor.                                                                            | `false`                        |
 | successCount        | Number of successes since the job was last modified.                                                     | -                              |
 | errorCount          | Number of errors since the job was last modified.                                                        | -                              |
@@ -370,6 +372,18 @@ Schedule a job on nodes that share a common attribute.
 ...
 "constraints": [["rack", "EQUALS", "rack-1"]],
 ...
+```
 
+### LIKE constraint
+
+Schedule jobs on nodes which attributes match a regular expression.
+
+```json
+...
+"constraints": [["rack", "LIKE", "rack-[1-3]"]],
+...
+```
+
+**Note:** This constraint applies to attributes of type `text` and `scalar` and elements in a `set`, but not `range`.
 
 [json]: http://www.json.org/
