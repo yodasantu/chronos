@@ -27,8 +27,8 @@ Mesosphere provides builds for Mesos and Chronos for major Linux distributions a
 Use the latest tagged Chronos release with Mesos 0.20+ as follows:
 
 ```sh
-curl -0 https://github.com/mesos/chronos/archive/2.3.4.tar.gz
-tar xvf 2.3.4.tar.gz
+curl -0 https://github.com/mesos/chronos/archive/2.4.0.tar.gz
+tar xvf 2.4.0.tar.gz
 ```
 
 <hr />
@@ -62,8 +62,6 @@ Start up Zookeeper, Mesos master, and Mesos slave(s).  Then try
 ### Environment Variables Mesos Looks For
 
 * `MESOS_NATIVE_LIBRARY`: Absolute path to the native mesos library. This is usually `/usr/local/lib/libmesos.so` on Linux and `/usr/local/lib/libmesos.dylib` on OSX.
-* `MESOS_LAUNCHER_DIR`: Absolute path to the src subdirectory of your mesos build, such that the shell executor can be found (e.g. If mesos was built in `/Users/florian/airbnb_code/mesos/build` then the value for this variable would be `/Users/florian/airbnb_code/mesos/build/src`).
-* `MESOS_KILLTREE`: Absolute path to the location of the `killtree.sh` script. (e.g. `/Users/florian/airbnb_code/mesos/src/scripts/killtree.sh`)
 
 If you're using the installer script this should be setup for you.
 
@@ -82,13 +80,9 @@ For more information on configuration options, please see [Configuration]({{ sit
 
 ### Example Run Scripts
 
-* Example [runit](http://smarden.org/runit/) run script
+* Example [runit](http://smarden.org/runit/) run script: [bin/run](https://github.com/mesos/chronos/blob/master/bin/run)
 
-    [bin/run](https://github.com/mesos/chronos/blob/master/bin/run)
-
-* Example local run script
-
-    [bin/start-chronos.bash](https://github.com/mesos/chronos/blob/master/bin/start-chronos.bash)
+* Example local run script: [bin/start-chronos.bash](https://github.com/mesos/chronos/blob/master/bin/start-chronos.bash)
 
 
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
